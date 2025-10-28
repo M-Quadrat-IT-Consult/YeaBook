@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="{{ current_language }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ ui.app_title }}</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            --bg-gradient-start: #102a43;
+            --bg-gradient-end: #334e68;
+            --card-bg: rgba(255, 255, 255, 0.88);
+            --card-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+            --primary: #0b7285;
+            --primary-hover: #0c8599;
+            --danger: #c92a2a;
+            --danger-hover: #e03131;
+            --muted: #495057;
+            --border: rgba(15, 23, 42, 0.08);
+            --text-strong: #0f172a;
+            --text-soft: #5c677d;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --card-bg: rgba(15, 23, 42, 0.72);
+                --card-shadow: 0 18px 45px rgba(8, 12, 23, 0.6);
+                --text-strong: #f8fafc;
+                --text-soft: #cbd5f5;
+                --border: rgba(148, 163, 184, 0.18);
+            }
+        }
+        * {
+            box-sizing: border-box;
+        }
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 3rem 1.5rem 4rem;
+    background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+    color: var(--text-strong);
+    display: flex;
+    justify-content: center;
+    position: relative;
+}
+.page {
+    width: 100%;
+    max-width: 1040px;
+    display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            animation: fadeIn 0.6s ease both;
+        }
+        .hero {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 1.5rem;
+            align-items: center;
+            color: #f8fafc;
+        }
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin: 0;
+            letter-spacing: -0.02em;
+            text-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        }
+        .hero-subtitle {
+            margin: 0.35rem 0 0;
+            font-size: 1rem;
+            color: rgba(248, 250, 252, 0.85);
+            animation: slideDown 0.4s ease both;
+        }
+        .header-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .header-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.55rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 250, 252, 0.55);
+            color: #f8fafc;
+            text-decoration: none;
+            font-weight: 600;
+            backdrop-filter: blur(12px);
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+        .header-link:hover {
+            transform: translateY(-2px) scale(1.01);
+            border-color: rgba(248, 250, 252, 0.9);
+            background: rgba(15, 23, 42, 0.2);
+        }
+        .language-switcher {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.35);
+            border: 1px solid rgba(248, 250, 252, 0.2);
+            color: #f8fafc;
+            backdrop-filter: blur(12px);
+        }
+        .language-switcher label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .language-switcher select {
+            border: none;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            padding: 0.25rem 0.35rem;
+            cursor: pointer;
+        }
+        .language-switcher select:focus-visible {
+            outline: 2px solid rgba(248, 250, 252, 0.75);
+            outline-offset: 2px;
+            border-radius: 999px;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 22px;
+            padding: clamp(1.5rem, 2vw, 2rem);
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(14px);
+        }
+        .form-card {
+            animation: floatUp 0.45s ease both;
+        }
+        .card h2 {
+            margin: 0 0 1.25rem;
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-strong);
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 1rem 1.25rem;
+        }
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .field label {
+            font-weight: 600;
+            color: var(--muted);
+        }
+        .field input,
+        .field select {
+            font: inherit;
+            padding: 0.7rem 0.85rem;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(248, 250, 252, 0.75);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .field select {
+            cursor: pointer;
+        }
+        .field input:focus,
+        .field select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(11, 114, 133, 0.18);
+            transform: translateY(-1px);
+        }
+        .field-hint {
+            font-size: 0.75rem;
+            color: var(--text-soft);
+        }
+        #custom-group-field {
+            grid-column: 1 / -1;
+        }
+        .form-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 0.5rem;
+        }
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 0.65rem 1.35rem;
+            border: none;
+            cursor: pointer;
+            font: inherit;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            text-decoration: none;
+        }
+        .button-primary {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 12px 30px rgba(11, 114, 133, 0.25);
+        }
+.button-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 36px rgba(12, 133, 153, 0.28);
+}
+.help-toggle {
+    position: fixed;
+    right: 1.5rem;
+    top: 3rem;
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(248, 250, 252, 0.9);
+    color: var(--primary);
+    font-size: 1.4rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    line-height: 1;
+}
+.help-actions {
+    position: fixed;
+    right: 1.5rem;
+    top: 9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    align-items: center;
+}
+.help-actions a {
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.92);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    color: var(--primary);
+    text-decoration: none;
+    position: relative;
+}
+.help-actions a svg {
+    width: 22px;
+    height: 22px;
+}
+.help-actions a .status-indicator {
+    display: none;
+}
+.help-actions a[data-status="new_release"] .status-indicator {
+    display: block;
+    background: #51cf66;
+    box-shadow: 0 0 0 4px rgba(81, 207, 102, 0.18);
+}
+.help-actions a:hover,
+.help-actions a:focus-visible {
+    outline: none;
+    transform: translateY(-3px);
+    box-shadow: 0 20px 42px rgba(15, 23, 42, 0.3);
+    background: rgba(248, 250, 252, 1);
+}
+.status-indicator {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #adb5bd;
+    box-shadow: 0 0 0 4px rgba(173, 181, 189, 0.18);
+}
+.help-actions .status-label {
+    position: absolute;
+    right: 110%;
+    background: rgba(15, 23, 42, 0.85);
+    color: #f8fafc;
+    padding: 0.3rem 0.5rem;
+    border-radius: 0.45rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    transform: translateY(-50%);
+    top: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+.help-actions a:hover .status-label,
+.help-actions a:focus-visible .status-label {
+    opacity: 1;
+}
+.help-toggle:hover,
+.help-toggle:focus-visible {
+    outline: none;
+    transform: translateY(-3px);
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.3);
+    background: rgba(248, 250, 252, 1);
+}
+.help-panel {
+    position: fixed;
+    right: 1.5rem;
+    top: 5.5rem;
+    width: min(320px, 80vw);
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.28);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(18px);
+    padding: 1.4rem 1.7rem;
+    transform: translateX(120%);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    z-index: 20;
+}
+.help-panel[data-visible="true"] {
+    transform: translateX(0);
+    opacity: 1;
+}
+.help-panel h3 {
+    margin: 0 0 0.75rem;
+    font-size: 1.15rem;
+    color: var(--text-strong);
+}
+.help-panel ol {
+    margin: 0 0 0.75rem 1rem;
+    padding: 0;
+    color: var(--text-soft);
+    font-size: 0.95rem;
+    display: grid;
+    gap: 0.45rem;
+}
+.help-panel code {
+    display: block;
+    margin-top: 0.35rem;
+    padding: 0.45rem 0.6rem;
+    background: rgba(15, 23, 42, 0.08);
+    border-radius: 8px;
+    font-family: "SFMono-Regular", ui-monospace, "Segoe UI Mono", Menlo, Monaco, monospace;
+    font-size: 0.75rem;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+.help-panel p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-soft);
+}
+.footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    color: rgba(248, 250, 252, 0.82);
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    display: flex;
+    justify-content: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+.footer a {
+    color: rgba(248, 250, 252, 0.95);
+    font-weight: 600;
+    text-decoration: underline;
+}
+.footer a:hover,
+.footer a:focus-visible {
+    color: #ffffff;
+}
+        .button-secondary {
+            background: rgba(148, 163, 184, 0.18);
+            color: var(--text-strong);
+        }
+        .button-secondary:hover {
+            background: rgba(148, 163, 184, 0.28);
+            transform: translateY(-2px);
+        }
+        .button-ghost {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid rgba(11, 114, 133, 0.35);
+        }
+        .button-ghost:hover {
+            background: rgba(11, 114, 133, 0.08);
+        }
+        .button-danger {
+            background: var(--danger);
+            color: #fff;
+            box-shadow: 0 12px 30px rgba(201, 42, 42, 0.25);
+        }
+        .button-danger:hover {
+            background: var(--danger-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 16px 36px rgba(224, 49, 49, 0.28);
+        }
+        .flash-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .flash {
+            padding: 0.9rem 1.1rem;
+            border-radius: 14px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            border: 1px solid transparent;
+            animation: fadeIn 0.4s ease both;
+        }
+        .flash.error {
+            background: rgba(255, 102, 102, 0.12);
+            border-color: rgba(255, 102, 102, 0.35);
+            color: #b71c1c;
+        }
+        .flash.success {
+            background: rgba(56, 217, 169, 0.14);
+            border-color: rgba(56, 217, 169, 0.3);
+            color: #0f5132;
+        }
+        .table-card {
+            animation: floatUp 0.55s ease both;
+        }
+        .contact-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .contact-table th,
+        .contact-table td {
+            text-align: left;
+            padding: 0.9rem 0.6rem;
+        }
+        .contact-table thead th {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-soft);
+            border-bottom: 1px solid var(--border);
+        }
+        .contact-table tbody tr {
+            border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+            animation: fadeIn 0.45s ease both;
+        }
+        .contact-table tbody tr:hover {
+            background: rgba(15, 23, 42, 0.05);
+        }
+        .contact-table td {
+            font-size: 0.95rem;
+            color: var(--text-strong);
+        }
+        .actions-cell {
+            width: 1%;
+            white-space: nowrap;
+        }
+        .action-buttons {
+            display: inline-flex;
+            gap: 0.5rem;
+        }
+        .inline-form {
+            display: inline;
+        }
+        .empty-state {
+            margin: 0;
+            color: var(--text-soft);
+            font-size: 1rem;
+        }
+@media (max-width: 720px) {
+    body {
+        padding: 2rem 1rem 3rem;
+    }
+    .help-toggle {
+        top: auto;
+        bottom: 2rem;
+        right: 1rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+    .help-actions {
+        top: auto;
+        bottom: 6rem;
+        right: 1rem;
+        flex-direction: row;
+    }
+    .help-actions a {
+        width: 40px;
+        height: 40px;
+    }
+    .help-panel {
+        right: 1rem;
+        bottom: 4.5rem;
+        top: auto;
+    }
+    .help-actions .status-label {
+        right: 50%;
+        top: auto;
+        bottom: 120%;
+        transform: translateX(50%);
+    }
+            .header-controls {
+                width: 100%;
+            }
+            .language-switcher,
+            .header-link {
+                width: 100%;
+                justify-content: center;
+            }
+            .form-actions {
+                justify-content: stretch;
+            }
+            .form-actions .button {
+                flex: 1 0 auto;
+            }
+            .contact-table thead {
+                display: none;
+            }
+            .contact-table tr {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.35rem 0.75rem;
+                padding: 0.9rem 0;
+            }
+            .contact-table td {
+                padding: 0;
+                font-size: 0.9rem;
+            }
+            .contact-table td::before {
+                content: attr(data-label);
+                display: block;
+                font-weight: 600;
+                margin-bottom: 0.25rem;
+                color: var(--text-soft);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                font-size: 0.7rem;
+            }
+            .actions-cell {
+                grid-column: 1 / -1;
+            }
+            .action-buttons {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes floatUp {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="help-toggle" type="button" aria-controls="help-panel" aria-expanded="false" title="{{ ui.help_toggle_label }}">?</button>
+    <div class="help-actions">
+        <a href="https://github.com/mxm-it/yeabook" target="_blank" rel="noopener" aria-label="{{ ui.github_label }}" title="{{ ui.status_label }}" data-source="github" data-status="unknown">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 0a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.74.08-.74 1.2.08 1.83 1.23 1.83 1.23 1.07 1.82 2.81 1.29 3.5.99.11-.78.42-1.29.76-1.59-2.66-.3-5.46-1.33-5.46-5.92 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.18 0 0 1-.32 3.28 1.23a11.4 11.4 0 0 1 5.97 0c2.28-1.55 3.27-1.23 3.27-1.23.66 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.6-2.81 5.61-5.49 5.9.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.29 0 .32.22.7.82.58A12 12 0 0 0 12 0Z"/>
+            </svg>
+            <span class="status-indicator" aria-hidden="true"></span>
+            <span class="status-label" role="status"></span>
+        </a>
+        <a href="https://hub.docker.com/r/mxm-it/yeabook" target="_blank" rel="noopener" aria-label="{{ ui.docker_label }}" title="{{ ui.status_label }}" data-source="docker" data-status="unknown">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M21.53 11.5c-.33-.26-.93-.35-1.4-.26-.06-1.29-.86-2.41-2.08-2.41h-1.63l-.3-.9-2.09.9H2.21a.21.21 0 0 0-.21.21v3.2c0 .12.09.21.21.21h.62c-.09.35-.12.7-.12 1.09 0 2.67 2.02 4.57 4.93 4.57 2.64 0 4.35-1.61 4.82-3.72h4.16c1.15 0 2.02-.74 2.38-1.87.35-.97.09-1.82-.47-2.22ZM6.4 9.21h2.1v2.08H6.4V9.21Zm-2.6 0h2.1v2.08H3.8V9.21Zm2.6 2.62h2.1v2.1H6.4v-2.1Zm-2.6 0h2.1v2.1H3.8v-2.1Zm5.7 2.1v-2.1h2.11v2.1H9.5Zm2.11-2.62h-2.11V9.21h2.11v2.08Zm0-2.62H9.5V6.59h2.11v2.1Zm2.63 2.62h-2.1V9.21h2.1v2.08Z"/>
+            </svg>
+            <span class="status-indicator" aria-hidden="true"></span>
+            <span class="status-label" role="status"></span>
+        </a>
+    </div>
+    <aside id="help-panel" class="help-panel" data-visible="false" aria-hidden="true">
+        <h3>{{ ui.help_heading }}</h3>
+        <ol>
+            <li>{{ ui.help_step1 }}</li>
+            <li>{{ ui.help_step2 }}</li>
+            <li>
+                {{ ui.help_step3 }}
+                <code>{{ request.url_root.rstrip('/') }}/phonebook.xml</code>
+            </li>
+            <li>{{ ui.help_step4 }}</li>
+        </ol>
+        <p>{{ ui.help_tip }}</p>
+    </aside>
+    <div class="page">
+        <header class="hero">
+            <div>
+                <h1 class="hero-title">{{ ui.app_title }}</h1>
+                {% if editing_notice %}
+                    <p class="hero-subtitle">{{ editing_notice }}</p>
+                {% endif %}
+            </div>
+            <div class="header-controls">
+                <a class="header-link" href="{{ url_for('main.phonebook') }}" target="_blank" rel="noopener">
+                    {{ ui.xml_preview_label }}
+                </a>
+                <form method="post" action="{{ url_for('main.set_language') }}" class="language-switcher">
+                    <label for="language">{{ ui.language_label }}</label>
+                    <select id="language" name="language" onchange="this.form.submit()">
+                        {% for code, label in languages.items() %}
+                            <option value="{{ code }}" {% if code == current_language %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <section class="card form-card">
+            <h2>{{ ui.form_edit_title if is_editing else ui.form_create_title }}</h2>
+            <form
+                method="post"
+                action="{{ url_for('main.update_contact_route', contact_id=edit_contact.id) if is_editing else url_for('main.create_contact') }}"
+                class="form-grid"
+            >
+                <div class="field">
+                    <label for="name">{{ ui.form_name_label }}</label>
+                    <input
+                        id="name"
+                        name="name"
+                        value="{{ edit_contact.name if is_editing else '' }}"
+                        placeholder="{{ ui.form_name_placeholder }}"
+                        required
+                        {% if is_editing %}autofocus{% endif %}
+                    >
+                </div>
+                <div class="field">
+                    <label for="group">{{ ui.form_group_label }}</label>
+                    <select
+                        id="group"
+                        name="group_name"
+                        required
+                    >
+                        {% for group in groups %}
+                            <option value="{{ group }}" {% if (is_editing and edit_contact.group_name == group) or (not is_editing and group == default_group) %}selected{% endif %}>
+                                {{ group }}
+                            </option>
+                        {% endfor %}
+                        <option value="__custom__" {% if is_editing and edit_contact.group_name not in groups %}selected{% endif %}>
+                            {{ ui.group_custom_option }}
+                        </option>
+                    </select>
+                </div>
+                <div class="field" id="custom-group-field" {% if not (is_editing and edit_contact.group_name not in groups) %}hidden{% endif %}>
+                    <label for="custom-group">{{ ui.group_custom_label }}</label>
+                    <input
+                        id="custom-group"
+                        name="custom_group_name"
+                        placeholder="{{ ui.form_group_placeholder }}"
+                        {% if is_editing and edit_contact.group_name not in groups %}
+                            value="{{ edit_contact.group_name }}"
+                            required
+                        {% endif %}
+                    >
+                    <span class="field-hint">{{ ui.group_custom_hint }}</span>
+                </div>
+                <div class="field">
+                    <label for="telephone">{{ ui.form_telephone_label }}</label>
+                    <input
+                        id="telephone"
+                        name="telephone"
+                        value="{{ (edit_contact.telephone or '') if is_editing else '' }}"
+                        placeholder="{{ ui.form_telephone_placeholder }}"
+                        pattern="[+0-9][0-9]*"
+                        title="{{ ui.phone_hint }}"
+                        inputmode="tel"
+                    >
+                    <span class="field-hint">{{ ui.phone_hint }}</span>
+                </div>
+                <div class="field">
+                    <label for="mobile">{{ ui.form_mobile_label }}</label>
+                    <input
+                        id="mobile"
+                        name="mobile"
+                        value="{{ (edit_contact.mobile or '') if is_editing else '' }}"
+                        placeholder="{{ ui.form_mobile_placeholder }}"
+                        pattern="[+0-9][0-9]*"
+                        title="{{ ui.phone_hint }}"
+                        inputmode="tel"
+                    >
+                </div>
+                <div class="field">
+                    <label for="other">{{ ui.form_other_label }}</label>
+                    <input
+                        id="other"
+                        name="other"
+                        value="{{ (edit_contact.other or '') if is_editing else '' }}"
+                        placeholder="{{ ui.form_other_placeholder }}"
+                        pattern="[+0-9][0-9]*"
+                        title="{{ ui.phone_hint }}"
+                        inputmode="tel"
+                    >
+                </div>
+                <div class="form-actions">
+                    {% if is_editing %}
+                        <a class="button button-secondary" href="{{ url_for('main.index') }}">
+                            {{ ui.form_cancel_edit }}
+                        </a>
+                    {% endif %}
+                    <button type="submit" class="button button-primary">
+                        {{ ui.form_submit_edit if is_editing else ui.form_submit }}
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <section class="card table-card">
+            {% if contacts %}
+                <table class="contact-table">
+                    <thead>
+                    <tr>
+                        <th>{{ ui.table_name_header }}</th>
+                        <th>{{ ui.table_group_header }}</th>
+                        <th>{{ ui.table_telephone_header }}</th>
+                        <th>{{ ui.table_mobile_header }}</th>
+                        <th>{{ ui.table_other_header }}</th>
+                        <th class="actions-cell">{{ ui.table_actions_header }}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for contact in contacts %}
+                        <tr class="contact-row" data-delay-ms="{{ loop.index0 * 60 }}">
+                            <td data-label="{{ ui.table_name_header }}">{{ contact.name }}</td>
+                            <td data-label="{{ ui.table_group_header }}">{{ contact.group_name or "—" }}</td>
+                            <td data-label="{{ ui.table_telephone_header }}">{{ contact.telephone or "—" }}</td>
+                            <td data-label="{{ ui.table_mobile_header }}">{{ contact.mobile or "—" }}</td>
+                            <td data-label="{{ ui.table_other_header }}">{{ contact.other or "—" }}</td>
+                            <td class="actions-cell" data-label="{{ ui.table_actions_header }}">
+                                <div class="action-buttons">
+                                    <a class="button button-ghost" href="{{ url_for('main.index', edit=contact.id) }}">
+                                        {{ ui.edit_button_label }}
+                                    </a>
+                                    <form method="post" action="{{ url_for('main.remove_contact', contact_id=contact.id) }}" class="inline-form">
+                                        <button type="submit" class="button button-danger">
+                                            {{ ui.delete_button_label }}
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="empty-state">{{ ui.no_contacts_message }}</p>
+            {% endif %}
+</section>
+    <footer class="footer">
+        <span>{{ ui.footer_prefix }}</span>
+        <a href="https://mxm-it.tech" target="_blank" rel="noopener">mxm-it.tech</a>
+        <span data-current-version>• {{ ui.version_prefix }} {{ app_version }}</span>
+    </footer>
+</div>
+    <script id="status-config" type="application/json">
+        {{
+            {
+                "endpoint": status_endpoint,
+                "messages": {
+                    "current": ui.status_current,
+                    "new_release": ui.status_new_release,
+                    "unreachable": ui.status_unreachable,
+                    "unknown": ui.status_unknown
+                },
+                "version_prefix": ui.version_prefix
+            } | tojson
+        }}
+    </script>
+    <script>
+        (function () {
+            const rows = document.querySelectorAll('[data-delay-ms]');
+            rows.forEach((row) => {
+                const value = Number(row.getAttribute('data-delay-ms'));
+                if (!Number.isNaN(value)) {
+                    row.style.animationDelay = `${value}ms`;
+                }
+            });
+
+            const groupSelect = document.getElementById('group');
+            const customField = document.getElementById('custom-group-field');
+            const customInput = document.getElementById('custom-group');
+            if (groupSelect && customField && customInput) {
+                let cachedCustomValue = customInput.value;
+                let initialized = false;
+                const toggleCustomField = () => {
+                    const useCustom = groupSelect.value === '__custom__';
+                    if (useCustom) {
+                        customField.hidden = false;
+                        customInput.required = true;
+                        if (!customInput.value && cachedCustomValue) {
+                            customInput.value = cachedCustomValue;
+                        }
+                        if (initialized) {
+                            customInput.focus();
+                        }
+                    } else {
+                        customField.hidden = true;
+                        customInput.required = false;
+                        cachedCustomValue = customInput.value;
+                        customInput.value = "";
+                    }
+                    initialized = true;
+                };
+
+                toggleCustomField();
+                groupSelect.addEventListener('change', toggleCustomField);
+            }
+
+            const helpToggle = document.querySelector('.help-toggle');
+            const helpPanel = document.getElementById('help-panel');
+            if (helpToggle && helpPanel) {
+                const updateState = (visible) => {
+                    helpPanel.dataset.visible = String(visible);
+                    helpPanel.setAttribute('aria-hidden', String(!visible));
+                    helpToggle.setAttribute('aria-expanded', String(visible));
+                };
+                helpToggle.addEventListener('click', () => {
+                    const isVisible = helpPanel.dataset.visible === 'true';
+                    updateState(!isVisible);
+                });
+                document.addEventListener('click', (event) => {
+                    if (
+                        helpPanel.dataset.visible === 'true' &&
+                        !helpPanel.contains(event.target) &&
+                        event.target !== helpToggle
+                    ) {
+                        updateState(false);
+                    }
+                });
+            }
+
+            const statusConfigElement = document.getElementById('status-config');
+            let statusEndpoint = '';
+            let statusMessages = {};
+            let versionPrefix = '';
+            if (statusConfigElement) {
+                try {
+                    const parsed = JSON.parse(statusConfigElement.textContent || '{}');
+                    statusEndpoint = parsed.endpoint || '';
+                    statusMessages = parsed.messages || {};
+                    versionPrefix = parsed.version_prefix || '';
+                } catch (error) {
+                    console.warn('Unable to parse release status config:', error);
+                }
+            }
+            if (statusEndpoint) {
+                fetch(statusEndpoint, { headers: { Accept: 'application/json' } })
+                    .then((response) => (response.ok ? response.json() : null))
+                    .then((payload) => {
+                        if (!payload) {
+                            return;
+                        }
+                        [
+                            ['github', document.querySelector('.help-actions a[data-source="github"]')],
+                            ['docker', document.querySelector('.help-actions a[data-source="docker"]')],
+                        ].forEach(([source, anchor]) => {
+                            if (!anchor) {
+                                return;
+                            }
+                            const info = payload[source] || {};
+                            const status = info.status || 'unknown';
+                            const version = info.version;
+                            anchor.dataset.status = status;
+                            const label = anchor.querySelector('.status-label');
+                            if (label) {
+                                const base = statusMessages[status] || statusMessages.unknown;
+                                label.textContent = version ? `${base} (${version})` : base;
+                                const baseTitle = anchor.getAttribute('aria-label') || '';
+                                anchor.title = baseTitle ? `${baseTitle} – ${label.textContent}` : label.textContent;
+                            }
+                        });
+                        const footerVersion = document.querySelector('.footer span[data-current-version]');
+                        if (footerVersion && payload.current_version) {
+                            footerVersion.textContent = `• ${versionPrefix} ${payload.current_version}`;
+                        }
+                    })
+                    .catch(() => {
+                        document.querySelectorAll('.help-actions a[data-source]').forEach((anchor) => {
+                            anchor.dataset.status = 'unreachable';
+                            const label = anchor.querySelector('.status-label');
+                            if (label) {
+                                label.textContent = statusMessages.unreachable;
+                                const baseTitle = anchor.getAttribute('aria-label') || '';
+                                anchor.title = baseTitle ? `${baseTitle} – ${label.textContent}` : label.textContent;
+                            }
+                        });
+                    });
+            }
+        })();
+    </script>
+</body>
+</html>

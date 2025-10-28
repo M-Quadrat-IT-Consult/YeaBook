@@ -1,0 +1,3 @@
+DEFAULT_APP_VERSION = "0.1.0"
+DEFAULT_GITHUB_REPO = "mxm-it/yeabook"
+DEFAULT_DOCKER_IMAGE = "mxm-it/yeabook"
