@@ -16,6 +16,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      attestations: write
+      id-token: write
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || '' }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN || '' }}
