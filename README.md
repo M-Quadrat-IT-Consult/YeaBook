@@ -2,6 +2,8 @@
 
 Simple Flask application for managing a Yealink-compatible phonebook. The HTML5 interface lets you add, edit, and remove contacts (including Yealink “groups”), while the generated `phonebook.xml` file is served over HTTP so Yealink phones can fetch the latest version automatically. The XML output follows the remote phonebook structure described in [Christopher Wilkinson’s article](https://christopherwilkinson.co.uk/2025/yealink-telephone-xml-remote-phonebook-hosting/), using `<Menu>` nodes per group and `<Unit>` entries with `Phone1/Phone2/Phone3` attributes.
 
+![YeaBook](image.png)
+
 ## Run with Docker
 
 ```bash
