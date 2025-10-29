@@ -27,6 +27,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug context
+        run: |
+          echo "Actor: ${{ github.actor }}"
+          echo "Repository owner: ${{ github.repository_owner }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Event: ${{ github.event_name }}"
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
