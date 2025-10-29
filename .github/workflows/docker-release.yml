@@ -33,13 +33,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # ✅ Log in to GHCR using GITHUB_TOKEN (recommended way)
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Optional: Log in to Docker Hub if credentials are provided
       - name: Log in to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME && env.DOCKERHUB_TOKEN }}
         uses: docker/login-action@v3
@@ -47,6 +49,7 @@ jobs:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
 
+      # Prepare Docker Hub image name (optional)
       - name: Prepare Docker Hub image name
         id: prepare
         env:
@@ -62,17 +65,19 @@ jobs:
           fi
           echo "docker_image=$image" >>"$GITHUB_OUTPUT"
 
+      # Generate image tags and labels
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ github.repository }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
             ${{ steps.prepare.outputs.docker_image }}
           tags: |
             type=ref,event=tag
             type=raw,value=latest
 
+      # Build and push to GHCR (and optionally Docker Hub)
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -83,3 +88,17 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Optional: Make the GHCR package public after first push
+      # Uncomment if you want automatic visibility change
+      # - name: Make GHCR package public
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   env:
+      #     ORG: ${{ github.repository_owner }}
+      #     PKG: ${{ env.IMAGE_NAME }}
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     gh api \
+      #       --method PATCH \
+      #       /orgs/${ORG}/packages/container/${PKG}/visibility \
+      #       -f visibility=public
