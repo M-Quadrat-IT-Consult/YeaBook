@@ -58,6 +58,19 @@ docker run --rm \
   yeabook
 ```
 
+When running on NAS devices or other systems with strict file permissions, map the `APP_UID`/`APP_GID` environment variables to match the host user that owns the bind-mounted directory:
+
+```bash
+docker run --rm \
+  -p 8000:8000 \
+  -v /volume2/docker/yeabook/data:/data \
+  -e PUID=$(id -u) \
+  -e PGID=$(id -g) \
+  yeabook
+```
+
+The container also honours `APP_UID`/`APP_GID` for backward compatibility (they override `PUID`/`PGID` when both are provided).
+
 ### Pointing Yealink phones to the XML feed
 
 In the Yealink web interface, configure the remote phonebook URL to:
