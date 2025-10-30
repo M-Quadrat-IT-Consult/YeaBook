@@ -25,7 +25,7 @@ from .db import (
     update_contact,
 )
 from .i18n import get_language_options, get_message, get_ui_strings, resolve_language
-from .status import get_release_status
+from .status import compare_versions, get_release_status
 from .xml_utils import write_phonebook_xml
 
 bp = Blueprint("main", __name__)
@@ -229,10 +229,13 @@ def status_api():
         remote_version = info.get("version")
         state = info.get("status")
         if state == "up_to_date" and isinstance(remote_version, str) and remote_version:
-            if remote_version == current_version:
+            comparison = compare_versions(current_version, remote_version)
+            if comparison == 0:
                 info["status"] = "current"
-            else:
+            elif comparison == 1:
                 info["status"] = "new_release"
+            elif comparison == -1:
+                info["status"] = "current"
         elif not state:
             info["status"] = "unknown"
     status["current_version"] = current_version

@@ -72,7 +72,7 @@ The phone will download the latest XML every time the directory is refreshed.
 
 ### Release status checks
 
-The header buttons query GitHub and Docker Hub using the defaults defined in `app/version.py`. You can override them with environment variables (`APP_VERSION`, `GITHUB_REPO`, `DOCKER_IMAGE`) if you fork the project or host your own image. The result is cached for 5 minutes (`STATUS_CACHE_TTL`) to avoid rate limits. If a newer tag than `APP_VERSION` is discovered, the Docker icon lights up green and the tooltip shows the remote version.
+The header buttons query GitHub and Docker Hub using the defaults defined in `app/version.py`. You can override them with environment variables (`APP_VERSION`, `GITHUB_REPO`, `DOCKER_IMAGE`) if you fork the project or host your own image. The result is cached for 5 minutes (`STATUS_CACHE_TTL`) to avoid rate limits. GitHub always reports the latest tagged release. Docker Hub ignores `latest` and other non-semver tags, picking the highest semantic version instead. If a newer tag than `APP_VERSION` is discovered, the Docker icon lights up green and the tooltip shows the remote version.
 
 ## Building multi-arch images locally
 
