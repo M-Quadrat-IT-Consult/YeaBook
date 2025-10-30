@@ -105,4 +105,4 @@ The workflow `.github/workflows/docker-release.yml` builds a multi-arch image an
 | `DOCKERHUB_TOKEN` | Docker Hub access token with `write` scope (optional) |
 | `DOCKERHUB_REPOSITORY` | Full Docker Hub repository name (e.g. `mxm-it/yeabook`). Defaults to `<username>/yeabook` when omitted. |
 
-The workflow triggers automatically whenever a tag matching `v*` is pushed and can also be run manually via *Run workflow* in GitHub. Each build publishes the tag version plus `latest` to every configured registry.
+The workflow triggers automatically whenever a tag matching `v*` is pushed and can also be run manually via *Run workflow* in GitHub. Releases tagged with `*-dev` publish only the exact tag (no `latest`), while other versions publish both the tag and `latest` across every configured registry.

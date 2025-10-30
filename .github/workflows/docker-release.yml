@@ -2,9 +2,6 @@ name: Build and Publish Docker Image
 
 on:
   push:
-    branches:
-      - main
-      - develop
     tags:
       - "v*"
   workflow_dispatch:
@@ -16,27 +13,20 @@ jobs:
   docker:
     name: Build and push multi-arch image
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: read
       packages: write
-      attestations: write
-      id-token: write
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || '' }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN || '' }}
       DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY || '' }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || github.repository_owner }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Debug context
-        run: |
-          echo "Actor: ${{ github.actor }}"
-          echo "Repository owner: ${{ github.repository_owner }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "Ref: ${{ github.ref }}"
-          echo "Event: ${{ github.event_name }}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -44,12 +34,28 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Detect tag type
+        id: taginfo
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            tag="${GITHUB_REF##*/}"
+          else
+            echo "::error::This workflow must be triggered by a tag starting with v"
+            exit 1
+          fi
+          echo "tag=$tag" >>"$GITHUB_OUTPUT"
+          if [[ "$tag" == *-dev ]]; then
+            echo "is_dev=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "is_dev=false" >>"$GITHUB_OUTPUT"
+          fi
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ env.GHCR_USERNAME }}
+          password: ${{ env.GHCR_TOKEN }}
 
       - name: Log in to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME && env.DOCKERHUB_TOKEN }}
@@ -58,12 +64,8 @@ jobs:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
 
-      - name: Prepare Docker Hub image name
+      - name: Prepare Docker Hub image
         id: prepare
-        env:
-          DOCKERHUB_REPOSITORY: ${{ env.DOCKERHUB_REPOSITORY }}
-          DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
         run: |
           image=""
           if [ -n "$DOCKERHUB_REPOSITORY" ]; then
@@ -78,45 +80,19 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+            ghcr.io/${{ env.GHCR_USERNAME }}/${{ env.IMAGE_NAME }}
             ${{ steps.prepare.outputs.docker_image }}
           tags: |
-            type=ref,event=tag
-            type=raw,value=latest
+            type=raw,value=${{ steps.taginfo.outputs.tag }}
+            ${{ steps.taginfo.outputs.is_dev == 'true' && '' || 'type=raw,value=latest' }}
 
-      - name: Build (develop branch)
-        if: github.ref == 'refs/heads/develop'
+      - name: Build and push image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: false
-          tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:develop
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and Push (main branch)
-        if: github.ref == 'refs/heads/main'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
           push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:main
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and Push (release tag)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
-          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
