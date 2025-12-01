@@ -8,10 +8,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DEFAULT_GROUP_NAME="Contacts" \
     FLASK_APP=app \
     APP_USER=appuser \
-    APP_UID=1000 \
-    APP_GID=1000 \
-    PUID=1000 \
-    PGID=1000 \
     APP_WORKDIR=/app
 
 RUN apt-get update \

@@ -84,7 +84,7 @@ jobs:
             ${{ steps.prepare.outputs.docker_image }}
           tags: |
             type=raw,value=${{ steps.taginfo.outputs.tag }}
-            ${{ steps.taginfo.outputs.is_dev == 'true' && '' || 'type=raw,value=latest' }}
+            type=raw,value=latest,enable=${{ steps.taginfo.outputs.is_dev != 'true' }}
 
       - name: Build and push image
         uses: docker/build-push-action@v5
