@@ -23,6 +23,7 @@ jobs:
       DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY || '' }}
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || '' }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || '' }}
+      PUBLISH_TO_GHCR: ${{ secrets.PUBLISH_TO_GHCR || 'false' }}
 
     steps:
       - name: Checkout
@@ -51,7 +52,7 @@ jobs:
           fi
 
       - name: Log in to GitHub Container Registry
-        if: ${{ env.GHCR_USERNAME && env.GHCR_TOKEN }}
+        if: ${{ env.PUBLISH_TO_GHCR == 'true' && env.GHCR_USERNAME != '' && env.GHCR_TOKEN != '' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -79,7 +80,7 @@ jobs:
       - name: Prepare GHCR image
         id: ghcr
         run: |
-          if [ -n "$GHCR_USERNAME" ] && [ -n "$GHCR_TOKEN" ]; then
+          if [ "$PUBLISH_TO_GHCR" = "true" ] && [ -n "$GHCR_USERNAME" ] && [ -n "$GHCR_TOKEN" ]; then
             echo "ghcr_image=ghcr.io/$GHCR_USERNAME/$IMAGE_NAME" >>"$GITHUB_OUTPUT"
           fi
 
