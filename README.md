@@ -58,7 +58,7 @@ docker run --rm \
   yeabook
 ```
 
-When running on NAS devices or other systems with strict file permissions, map the `APP_UID`/`APP_GID` environment variables to match the host user that owns the bind-mounted directory:
+By default the container keeps the existing ownership of a bind-mounted `/data` volume and runs with that UID/GID. When running on NAS devices or other systems with strict file permissions, set `PUID`/`PGID` to match the host user that owns the directory (only then will the entrypoint adjust ownership):
 
 ```bash
 docker run --rm \

@@ -21,8 +21,9 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || '' }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN || '' }}
       DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY || '' }}
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || github.repository_owner }}
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || '' }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || '' }}
+      PUBLISH_TO_GHCR: ${{ secrets.PUBLISH_TO_GHCR || 'false' }}
 
     steps:
       - name: Checkout
@@ -51,6 +52,7 @@ jobs:
           fi
 
       - name: Log in to GitHub Container Registry
+        if: ${{ env.PUBLISH_TO_GHCR == 'true' && env.GHCR_USERNAME != '' && env.GHCR_TOKEN != '' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -75,16 +77,23 @@ jobs:
           fi
           echo "docker_image=$image" >>"$GITHUB_OUTPUT"
 
+      - name: Prepare GHCR image
+        id: ghcr
+        run: |
+          if [ "$PUBLISH_TO_GHCR" = "true" ] && [ -n "$GHCR_USERNAME" ] && [ -n "$GHCR_TOKEN" ]; then
+            echo "ghcr_image=ghcr.io/$GHCR_USERNAME/$IMAGE_NAME" >>"$GITHUB_OUTPUT"
+          fi
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ env.GHCR_USERNAME }}/${{ env.IMAGE_NAME }}
+            ${{ steps.ghcr.outputs.ghcr_image }}
             ${{ steps.prepare.outputs.docker_image }}
           tags: |
             type=raw,value=${{ steps.taginfo.outputs.tag }}
-            ${{ steps.taginfo.outputs.is_dev == 'true' && '' || 'type=raw,value=latest' }}
+            type=raw,value=latest,enable=${{ steps.taginfo.outputs.is_dev != 'true' }}
 
       - name: Build and push image
         uses: docker/build-push-action@v5
