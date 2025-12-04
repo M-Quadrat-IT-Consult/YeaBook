@@ -194,6 +194,11 @@ def _first_value(values: Sequence[str]) -> str:
     return ""
 
 
+def _normalize_phone(value: str) -> str:
+    """Remove spaces from phone numbers to handle CSVs with spaced digits."""
+    return re.sub(r"\s+", "", value)
+
+
 @bp.record_once
 def _setup(state) -> None:
     app = state.app
@@ -342,9 +347,9 @@ def import_apply():
             skipped_missing_name += 1
             continue
 
-        telephone = _first_value(values.get("telephone", []))
-        mobile = _first_value(values.get("mobile", []))
-        other = _first_value(values.get("other", []))
+        telephone = _normalize_phone(_first_value(values.get("telephone", [])))
+        mobile = _normalize_phone(_first_value(values.get("mobile", [])))
+        other = _normalize_phone(_first_value(values.get("other", [])))
         invalid_labels = _invalid_phone_labels(
             {"telephone": telephone, "mobile": mobile, "other": other},
             ui_strings,
