@@ -46,6 +46,10 @@ The default group can be changed globally with the `DEFAULT_GROUP_NAME` environm
 
 - When filling out the form, choose an existing group from the dropdown or pick *Other (custom)…* to supply a new group name without leaving the page.
 
+### Database schema
+
+On startup the app checks the SQLite schema version and applies non-destructive migrations (e.g. adding new columns like `company`) if needed. The result is logged (`Database schema is up to date` / `Database schema upgraded from vX to vY`) so you can see it in container logs.
+
 ### Phone number validation
 
 Office, mobile, and other number fields accept only `+` and digits (`0–9`). Invalid inputs are blocked both in the browser UI and server-side, ensuring the exported XML stays compatible with Yealink’s expectations.
