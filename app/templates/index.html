@@ -131,6 +131,146 @@ body {
             border: 1px solid var(--border);
             backdrop-filter: blur(14px);
         }
+        .import-panel {
+            position: fixed;
+            right: 1.5rem;
+            top: 5.5rem;
+            width: min(540px, 92vw);
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.28);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(18px);
+            padding: 1.3rem 1.5rem;
+            transform: translateX(130%);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            z-index: 22;
+            max-height: calc(100vh - 8rem);
+            height: calc(100vh - 8rem);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .import-panel[data-visible="true"] {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .import-panel-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            height: 100%;
+            overflow: hidden;
+            }
+        .import-panel-body {
+            overflow-y: auto;
+            padding-right: 0.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .import-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .import-header h2 {
+            margin-bottom: 0.35rem;
+        }
+        .import-subtitle {
+            margin: 0;
+            color: var(--text-soft);
+        }
+        .import-upload {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: flex-start;
+            min-width: 260px;
+        }
+        .file-input {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            padding: 0.65rem 0.9rem;
+            cursor: pointer;
+            background: rgba(248, 250, 252, 0.65);
+        }
+        .file-input input {
+            display: none;
+        }
+        .import-mapping {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.8rem;
+        }
+        .mapping-grid label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            background: rgba(248, 250, 252, 0.65);
+        }
+        .mapping-column {
+            font-weight: 600;
+            color: var(--text-strong);
+        }
+        .mapping-grid select {
+            padding: 0.6rem 0.75rem;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: white;
+            font: inherit;
+        }
+        .import-preview {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .import-preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            background: rgba(15, 23, 42, 0.04);
+            color: var(--text-soft);
+        }
+        .import-preview-table-wrapper {
+            overflow-x: auto;
+        }
+        .import-preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 480px;
+        }
+        .import-preview-table th,
+        .import-preview-table td {
+            padding: 0.6rem 0.85rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        .import-preview-table th {
+            background: rgba(15, 23, 42, 0.03);
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+        .import-actions {
+            justify-content: flex-start;
+        }
         .form-card {
             animation: floatUp 0.45s ease both;
         }
@@ -240,6 +380,29 @@ body {
     flex-direction: column;
     gap: 0.65rem;
     align-items: center;
+}
+.import-toggle {
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(248, 250, 252, 0.92);
+    color: var(--primary);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.import-toggle:hover,
+.import-toggle:focus-visible {
+    outline: none;
+    transform: translateY(-3px);
+    box-shadow: 0 20px 42px rgba(15, 23, 42, 0.3);
+    background: rgba(248, 250, 252, 1);
 }
 .help-actions a {
     width: 46px;
@@ -492,14 +655,24 @@ body {
         right: 1rem;
         flex-direction: row;
     }
-    .help-actions a {
+    .help-actions a,
+    .help-actions .import-toggle {
         width: 40px;
         height: 40px;
+    }
+    .help-actions .import-toggle {
+        font-size: 0.85rem;
     }
     .help-panel {
         right: 1rem;
         bottom: 4.5rem;
         top: auto;
+    }
+    .import-panel {
+        right: 1rem;
+        bottom: 10rem;
+        top: auto;
+        width: min(94vw, 500px);
     }
     .help-actions .status-label {
         right: 50%;
@@ -601,6 +774,15 @@ body {
             <span class="status-indicator" aria-hidden="true"></span>
             <span class="status-label" role="status"></span>
         </a>
+        <button
+            class="import-toggle"
+            type="button"
+            aria-controls="import-panel"
+            aria-expanded="{{ 'true' if import_preview else 'false' }}"
+            title="{{ ui.import_title }}"
+        >
+            CSV
+        </button>
     </div>
     <aside id="help-panel" class="help-panel" data-visible="false" aria-hidden="true">
         <h3>{{ ui.help_heading }}</h3>
@@ -614,6 +796,106 @@ body {
             <li>{{ ui.help_step4 }}</li>
         </ol>
         <p>{{ ui.help_tip }}</p>
+    </aside>
+    <aside
+        id="import-panel"
+        class="import-panel"
+        data-visible="{{ 'true' if import_preview else 'false' }}"
+        aria-hidden="{{ 'false' if import_preview else 'true' }}"
+    >
+        <div class="import-panel-content">
+            <div class="import-header">
+                <div>
+                    <h2>{{ ui.import_title }}</h2>
+                    <p class="import-subtitle">{{ ui.import_description }}</p>
+                </div>
+                <form
+                    class="import-upload"
+                    method="post"
+                    action="{{ url_for('main.import_preview_route') }}"
+                    enctype="multipart/form-data"
+                >
+                    <label class="file-input">
+                        <span>{{ ui.import_file_label }}</span>
+                        <input type="file" name="file" accept=".csv,text/csv">
+                    </label>
+                    <button type="submit" class="button button-secondary">
+                        {{ ui.import_upload_button }}
+                    </button>
+                    <span class="field-hint">{{ ui.import_hint }}</span>
+                </form>
+            </div>
+
+            <div class="import-panel-body">
+                {% if import_preview %}
+                    <div class="import-mapping">
+                        <div>
+                            <h3>{{ ui.import_mapping_title }}</h3>
+                            <p class="field-hint">{{ ui.import_mapping_description }}</p>
+                        </div>
+                        <form method="post" action="{{ url_for('main.import_apply') }}" class="mapping-form">
+                            <input type="hidden" name="import_id" value="{{ import_preview.id }}">
+                            <div class="mapping-grid">
+                                {% for header in import_preview.headers %}
+                                    {% set header_index = loop.index0 %}
+                                    <label>
+                                        <span class="mapping-column">{{ header }}</span>
+                                        <select name="map_{{ loop.index0 }}">
+                                            {% for option in import_mapping_options %}
+                                                <option
+                                                    value="{{ option.value }}"
+                                                    {% if import_preview.suggested[header_index] == option.value %}selected{% endif %}
+                                                >
+                                                    {{ option.label }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                            <div class="import-preview">
+                                <div class="import-preview-header">
+                                    <span>{{ ui.import_preview_label }} ({{ import_preview.rows|length }}/{{ import_preview.total_rows }})</span>
+                                    <span>{{ import_preview.total_rows }} {{ ui.import_total_rows }}</span>
+                                </div>
+                                <div class="import-preview-table-wrapper">
+                                    <table class="import-preview-table">
+                                        <thead>
+                                        <tr>
+                                            {% for header in import_preview.headers %}
+                                                <th>{{ header }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for row in import_preview.rows %}
+                                            <tr>
+                                                {% for cell in row %}
+                                                    <td>{{ cell }}</td>
+                                                {% endfor %}
+                                            </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="form-actions import-actions">
+                                <button type="submit" class="button button-primary">
+                                    {{ ui.import_apply_button }}
+                                </button>
+                                <button
+                                    type="submit"
+                                    class="button button-secondary"
+                                    formaction="{{ url_for('main.import_cancel') }}"
+                                >
+                                    {{ ui.import_cancel_button }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
     </aside>
     <div class="page">
         <header class="hero">
@@ -666,6 +948,15 @@ body {
                         placeholder="{{ ui.form_name_placeholder }}"
                         required
                         {% if is_editing %}autofocus{% endif %}
+                    >
+                </div>
+                <div class="field">
+                    <label for="company">{{ ui.form_company_label }}</label>
+                    <input
+                        id="company"
+                        name="company"
+                        value="{{ (edit_contact.company or '') if is_editing else '' }}"
+                        placeholder="{{ ui.form_company_placeholder }}"
                     >
                 </div>
                 <div class="field">
@@ -754,6 +1045,7 @@ body {
                     <thead>
                     <tr>
                         <th>{{ ui.table_name_header }}</th>
+                        <th>{{ ui.table_company_header }}</th>
                         <th>{{ ui.table_group_header }}</th>
                         <th>{{ ui.table_telephone_header }}</th>
                         <th>{{ ui.table_mobile_header }}</th>
@@ -765,6 +1057,7 @@ body {
                     {% for contact in contacts %}
                         <tr class="contact-row" data-delay-ms="{{ loop.index0 * 60 }}">
                             <td data-label="{{ ui.table_name_header }}">{{ contact.name }}</td>
+                            <td data-label="{{ ui.table_company_header }}">{{ contact.company or "—" }}</td>
                             <td data-label="{{ ui.table_group_header }}">{{ contact.group_name or "—" }}</td>
                             <td data-label="{{ ui.table_telephone_header }}">{{ contact.telephone or "—" }}</td>
                             <td data-label="{{ ui.table_mobile_header }}">{{ contact.mobile or "—" }}</td>
@@ -868,6 +1161,30 @@ body {
                         event.target !== helpToggle
                     ) {
                         updateState(false);
+                    }
+                });
+            }
+
+            const importToggle = document.querySelector('.import-toggle');
+            const importPanel = document.getElementById('import-panel');
+            if (importToggle && importPanel) {
+                const setImportVisible = (visible) => {
+                    importPanel.dataset.visible = String(visible);
+                    importPanel.setAttribute('aria-hidden', String(!visible));
+                    importToggle.setAttribute('aria-expanded', String(visible));
+                };
+                setImportVisible(importPanel.dataset.visible === 'true');
+                importToggle.addEventListener('click', () => {
+                    const isVisible = importPanel.dataset.visible === 'true';
+                    setImportVisible(!isVisible);
+                });
+                document.addEventListener('click', (event) => {
+                    if (
+                        importPanel.dataset.visible === 'true' &&
+                        !importPanel.contains(event.target) &&
+                        event.target !== importToggle
+                    ) {
+                        setImportVisible(false);
                     }
                 });
             }

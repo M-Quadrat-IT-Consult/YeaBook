@@ -21,6 +21,12 @@ The UI pings GitHub and Docker Hub (configurable) to display a release status in
 
 The UI can be displayed in English, German, or Polish. Use the language selector in the top-right corner of the page to switch instantly between translations.
 
+### Importing contacts from CSV
+
+- Use the **Import contacts from CSV** card on the homepage to upload a UTF-8 CSV (comma, semicolon, or tab separators are supported).
+- After uploading, map CSV columns to YeaBook fields in the on-page editor; rows without a name are skipped automatically.
+- Phone numbers must still follow the `+`/digits rule—rows with invalid numbers are reported and skipped. Up to 1,000 rows are imported per file.
+
 ### Yealink XML structure
 
 Each contact belongs to a group (for example “Staff”, “Suppliers”, “Support”). Groups become `<Menu Name="...">` elements in the generated XML so handsets can browse contacts by section. Up to three numbers per entry are mapped to the `Phone1`, `Phone2`, and `Phone3` attributes (office, mobile, and other respectively):

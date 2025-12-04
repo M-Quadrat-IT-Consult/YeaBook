@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 
@@ -13,6 +14,10 @@ from .version import (
 
 def create_app() -> Flask:
     app = Flask(__name__)
+    app.logger.setLevel(logging.INFO)
+    if not app.logger.handlers:
+        app.logger.addHandler(logging.StreamHandler())
+    app.logger.propagate = True
 
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     data_dir.mkdir(parents=True, exist_ok=True)
