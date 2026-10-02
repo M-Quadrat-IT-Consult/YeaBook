@@ -1,0 +1,66 @@
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit to test; release builds pass the resolved tag SHA"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+
+  docker:
+    name: Docker (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linux/amd64, linux/arm64, linux/386, linux/arm/v7]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the platform image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          load: true
+          push: false
+          tags: yeabook:test
+          build-args: APP_VERSION=v0.0.0-test
+          cache-from: type=gha,scope=yeabook-test-${{ matrix.platform }}
+          cache-to: type=gha,scope=yeabook-test-${{ matrix.platform }},mode=max
+      - run: python tests/docker_smoke.py yeabook:test
+        env:
+          EXPECTED_APP_VERSION: v0.0.0-test
+          TEST_PLATFORM: ${{ matrix.platform }}

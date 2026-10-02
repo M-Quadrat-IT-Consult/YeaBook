@@ -6,13 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PHONEBOOK_TITLE="YeaBook Directory" \
     PHONEBOOK_PROMPT="Select a contact" \
     DEFAULT_GROUP_NAME="Contacts" \
-    FLASK_APP=app \
-    APP_USER=appuser \
-    APP_UID=1000 \
-    APP_GID=1000 \
-    PUID=1000 \
-    PGID=1000 \
-    APP_WORKDIR=/app
+    FLASK_APP=app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends gosu \
@@ -23,13 +17,19 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY LICENSE .
+COPY app ./app
 
 COPY docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+ARG APP_VERSION=0.1.0
+ENV APP_VERSION=${APP_VERSION}
+
 ENTRYPOINT ["/entrypoint.sh"]
 
 EXPOSE 8000
+
+VOLUME ["/data"]
 
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]

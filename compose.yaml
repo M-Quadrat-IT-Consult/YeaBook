@@ -1,0 +1,15 @@
+services:
+  yeabook:
+    build: .
+    image: yeabook:local
+    ports:
+      - "8000:8000"
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - yeabook-data:/data
+    restart: unless-stopped
+
+volumes:
+  yeabook-data:
+    name: yeabook-data

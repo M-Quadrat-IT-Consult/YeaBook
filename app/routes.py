@@ -3,8 +3,12 @@ import csv
 import io
 import json
 import re
+import secrets
+import sqlite3
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 from werkzeug.datastructures import FileStorage
@@ -18,18 +22,23 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     session,
     url_for,
 )
 
 from .db import (
+    BackupValidationError,
     close_db,
     delete_contact,
     fetch_contact,
     fetch_contacts,
     init_db,
     insert_contact,
+    prepare_database_restore,
+    restore_database,
     update_contact,
+    write_database_backup,
 )
 from .i18n import get_language_options, get_message, get_ui_strings, resolve_language
 from .status import compare_versions, get_release_status
@@ -50,8 +59,10 @@ IMPORT_TARGET_FIELDS: Dict[str, str] = {
     "mobile": "import_field_mobile",
     "other": "import_field_other",
     "company": "import_field_company",
+    "comment": "import_field_comment",
 }
 MAX_IMPORT_ROWS = 1000
+MAX_BACKUP_UPLOAD_BYTES = 64 * 1024 * 1024
 
 
 def _publish_phonebook() -> str:
@@ -174,6 +185,8 @@ def _guess_mapping(headers: Sequence[str]) -> List[str]:
             guesses.append("name")
         elif normalized.startswith(("company", "firma", "organization", "organisation")):
             guesses.append("company")
+        elif normalized.startswith(("comment", "komentarz", "kommentar", "note", "notiz", "uwagi")):
+            guesses.append("comment")
         elif normalized.startswith(("group", "department", "team")):
             guesses.append("group_name")
         elif normalized.startswith(("mobile", "cell", "gsm")):
@@ -212,6 +225,8 @@ def _setup(state) -> None:
 def index():
     language = _get_language()
     ui_strings = get_ui_strings(language)
+    if "restore_token" not in session:
+        session["restore_token"] = secrets.token_urlsafe(32)
     contacts = fetch_contacts()
     default_group = current_app.config["DEFAULT_GROUP_NAME"]
     groups = sorted(
@@ -255,6 +270,7 @@ def index():
         {"value": "name", "label": ui_strings["import_field_name"]},
         {"value": "group_name", "label": ui_strings["import_field_group"]},
         {"value": "company", "label": ui_strings["import_field_company"]},
+        {"value": "comment", "label": ui_strings["import_field_comment"]},
         {"value": "telephone", "label": ui_strings["import_field_telephone"]},
         {"value": "mobile", "label": ui_strings["import_field_mobile"]},
         {"value": "other", "label": ui_strings["import_field_other"]},
@@ -275,6 +291,7 @@ def index():
         status_endpoint=url_for("main.status_api"),
         import_preview=import_preview,
         import_mapping_options=import_mapping_options,
+        restore_token=session["restore_token"],
     )
 
 
@@ -360,7 +377,8 @@ def import_apply():
 
         group_name = _first_value(values.get("group_name", [])) or current_app.config["DEFAULT_GROUP_NAME"]
         company = _first_value(values.get("company", []))
-        insert_contact(name, telephone, mobile, other, group_name, company)
+        comment = "\n".join(values.get("comment", []))
+        insert_contact(name, telephone, mobile, other, group_name, company, comment)
         inserted += 1
 
     if inserted:
@@ -394,6 +412,7 @@ def create_contact():
     ui_strings = get_ui_strings(language)
     name = (request.form.get("name") or "").strip()
     company = (request.form.get("company") or "").strip()
+    comment = (request.form.get("comment") or "").strip()
     telephone = (request.form.get("telephone") or "").strip()
     mobile = (request.form.get("mobile") or "").strip()
     other = (request.form.get("other") or "").strip()
@@ -422,7 +441,7 @@ def create_contact():
         )
         return redirect(url_for("main.index"))
 
-    insert_contact(name, telephone, mobile, other, group_name, company)
+    insert_contact(name, telephone, mobile, other, group_name, company, comment)
     _publish_phonebook()
     flash(get_message(language, "contact_added", name=name), "success")
     return redirect(url_for("main.index"))
@@ -439,6 +458,7 @@ def update_contact_route(contact_id: int):
 
     name = (request.form.get("name") or "").strip()
     company = (request.form.get("company") or "").strip()
+    comment = (request.form.get("comment", existing.get("comment")) or "").strip()
     telephone = (request.form.get("telephone") or "").strip()
     mobile = (request.form.get("mobile") or "").strip()
     other = (request.form.get("other") or "").strip()
@@ -475,6 +495,7 @@ def update_contact_route(contact_id: int):
         other,
         group_name,
         company,
+        comment,
     )
     if not was_updated:
         flash(get_message(language, "contact_missing"), "error")
@@ -491,6 +512,82 @@ def remove_contact(contact_id: int):
     delete_contact(contact_id)
     _publish_phonebook()
     flash(get_message(language, "contact_removed"), "success")
+    return redirect(url_for("main.index"))
+
+
+@bp.route("/backup", methods=["GET"])
+def download_backup():
+    backup_dir = None
+    backup_file = None
+    try:
+        backup_dir = TemporaryDirectory(prefix="yeabook-backup-")
+        backup_path = Path(backup_dir.name) / "contacts.db"
+        write_database_backup(backup_path)
+        backup_file = backup_path.open("rb")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        response = send_file(
+            backup_file,
+            mimetype="application/vnd.sqlite3",
+            as_attachment=True,
+            download_name=f"yeabook-backup-{timestamp}.db",
+            conditional=False,
+            etag=False,
+        )
+        response.content_length = backup_path.stat().st_size
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        # Keep streaming the file, but let Response.close() run our cleanup after
+        # the download completes or the client disconnects.
+        response.direct_passthrough = False
+        response.call_on_close(backup_dir.cleanup)
+        return response
+    except (OSError, sqlite3.Error):
+        if backup_file is not None:
+            backup_file.close()
+        if backup_dir is not None:
+            backup_dir.cleanup()
+        current_app.logger.exception("Unable to create a database backup for download")
+        flash(get_message(_get_language(), "backup_failed"), "error")
+        return redirect(url_for("main.index"))
+
+
+@bp.route("/backup/restore", methods=["POST"])
+def restore_backup():
+    language = _get_language()
+    if request.content_length and request.content_length > MAX_BACKUP_UPLOAD_BYTES + 1024 * 1024:
+        flash(get_message(language, "restore_too_large"), "error")
+        return redirect(url_for("main.index"))
+    token = session.get("restore_token", "")
+    if not token or not secrets.compare_digest(token.encode(), request.form.get("restore_token", "").encode()):
+        flash(get_message(language, "restore_invalid_request"), "error")
+        return redirect(url_for("main.index"))
+    if request.form.get("confirm_restore") != "yes":
+        flash(get_message(language, "restore_confirmation_required"), "error")
+        return redirect(url_for("main.index"))
+    upload = request.files.get("backup_file")
+    if upload is None or not upload.filename:
+        flash(get_message(language, "restore_file_required"), "error")
+        return redirect(url_for("main.index"))
+    try:
+        with TemporaryDirectory(prefix="yeabook-restore-") as directory:
+            backup_path = Path(directory) / "uploaded.db"
+            with backup_path.open("wb") as output:
+                uploaded_size = 0
+                while chunk := upload.stream.read(1024 * 1024):
+                    uploaded_size += len(chunk)
+                    if uploaded_size > MAX_BACKUP_UPLOAD_BYTES:
+                        raise BackupValidationError("restore_too_large")
+                    output.write(chunk)
+            prepare_database_restore(backup_path)
+            restored_count = restore_database(backup_path, _publish_phonebook)
+    except BackupValidationError as error:
+        flash(get_message(language, str(error)), "error")
+        return redirect(url_for("main.index"))
+    except (OSError, sqlite3.Error):
+        current_app.logger.exception("Unable to restore the database backup")
+        flash(get_message(language, "restore_failed"), "error")
+        return redirect(url_for("main.index"))
+    flash(get_message(language, "restore_succeeded", contacts=restored_count), "success")
     return redirect(url_for("main.index"))
 
 

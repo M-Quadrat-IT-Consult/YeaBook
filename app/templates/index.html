@@ -274,6 +274,30 @@ body {
         .form-card {
             animation: floatUp 0.45s ease both;
         }
+        .restore-card summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-strong);
+        }
+        .restore-description {
+            color: var(--text-soft);
+            line-height: 1.5;
+        }
+        .restore-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .restore-confirm {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            line-height: 1.5;
+        }
+        .restore-confirm input {
+            margin-top: 0.35rem;
+            flex-shrink: 0;
+        }
         .card h2 {
             margin: 0 0 1.25rem;
             font-size: 1.35rem;
@@ -295,6 +319,7 @@ body {
             color: var(--muted);
         }
         .field input,
+        .field textarea,
         .field select {
             font: inherit;
             padding: 0.7rem 0.85rem;
@@ -307,6 +332,7 @@ body {
             cursor: pointer;
         }
         .field input:focus,
+        .field textarea:focus,
         .field select:focus {
             outline: none;
             border-color: var(--primary);
@@ -317,8 +343,13 @@ body {
             font-size: 0.75rem;
             color: var(--text-soft);
         }
-        #custom-group-field {
+        #custom-group-field,
+        .comment-field {
             grid-column: 1 / -1;
+        }
+        .field textarea {
+            resize: vertical;
+            min-height: 5rem;
         }
         .form-actions {
             grid-column: 1 / -1;
@@ -625,6 +656,16 @@ body {
             width: 1%;
             white-space: nowrap;
         }
+        .contact-comment {
+            margin: 0.4rem 0 0;
+            max-width: 28rem;
+            max-height: 12rem;
+            overflow: auto;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            font-size: 0.85rem;
+            color: var(--text-soft);
+        }
         .action-buttons {
             display: inline-flex;
             gap: 0.5rem;
@@ -906,6 +947,9 @@ body {
                 {% endif %}
             </div>
             <div class="header-controls">
+                <a class="header-link" href="{{ url_for('main.download_backup') }}" title="{{ ui.backup_download_hint }}">
+                    {{ ui.backup_download_label }}
+                </a>
                 <a class="header-link" href="{{ url_for('main.phonebook') }}" target="_blank" rel="noopener">
                     {{ ui.xml_preview_label }}
                 </a>
@@ -931,6 +975,26 @@ body {
                 </div>
             {% endif %}
         {% endwith %}
+
+        <details class="card restore-card">
+            <summary>{{ ui.restore_title }}</summary>
+            <p class="restore-description">{{ ui.restore_description }}</p>
+            <form method="post" action="{{ url_for('main.restore_backup') }}" enctype="multipart/form-data" class="restore-form">
+                <input type="hidden" name="restore_token" value="{{ restore_token }}">
+                <div class="field">
+                    <label for="backup-file">{{ ui.restore_file_label }}</label>
+                    <input id="backup-file" type="file" name="backup_file" accept=".db,.sqlite,.sqlite3,application/vnd.sqlite3" aria-describedby="restore-file-hint" required>
+                    <span class="field-hint" id="restore-file-hint">{{ ui.restore_file_hint }}</span>
+                </div>
+                <label class="restore-confirm" for="confirm-restore">
+                    <input id="confirm-restore" type="checkbox" name="confirm_restore" value="yes" required>
+                    <span>{{ ui.restore_confirm_label }}</span>
+                </label>
+                <div class="form-actions">
+                    <button type="submit" class="button button-danger">{{ ui.restore_submit }}</button>
+                </div>
+            </form>
+        </details>
 
         <section class="card form-card">
             <h2>{{ ui.form_edit_title if is_editing else ui.form_create_title }}</h2>
@@ -1026,6 +1090,11 @@ body {
                         inputmode="tel"
                     >
                 </div>
+                <div class="field comment-field">
+                    <label for="comment">{{ ui.form_comment_label }}</label>
+                    <textarea id="comment" name="comment" rows="3" placeholder="{{ ui.form_comment_placeholder }}" aria-describedby="comment-hint">{{ (edit_contact.comment or '') if is_editing else '' }}</textarea>
+                    <span class="field-hint" id="comment-hint">{{ ui.form_comment_hint }}</span>
+                </div>
                 <div class="form-actions">
                     {% if is_editing %}
                         <a class="button button-secondary" href="{{ url_for('main.index') }}">
@@ -1056,7 +1125,12 @@ body {
                     <tbody>
                     {% for contact in contacts %}
                         <tr class="contact-row" data-delay-ms="{{ loop.index0 * 60 }}">
-                            <td data-label="{{ ui.table_name_header }}">{{ contact.name }}</td>
+                            <td data-label="{{ ui.table_name_header }}">
+                                {{ contact.name }}
+                                {% if contact.comment %}
+                                    <p class="contact-comment"><strong>{{ ui.form_comment_label }}:</strong> {{ contact.comment }}</p>
+                                {% endif %}
+                            </td>
                             <td data-label="{{ ui.table_company_header }}">{{ contact.company or "—" }}</td>
                             <td data-label="{{ ui.table_group_header }}">{{ contact.group_name or "—" }}</td>
                             <td data-label="{{ ui.table_telephone_header }}">{{ contact.telephone or "—" }}</td>

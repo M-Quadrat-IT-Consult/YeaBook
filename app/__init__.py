@@ -12,15 +12,15 @@ from .version import (
 )
 
 
-def create_app() -> Flask:
+def create_app(test_config=None) -> Flask:
     app = Flask(__name__)
     app.logger.setLevel(logging.INFO)
     if not app.logger.handlers:
         app.logger.addHandler(logging.StreamHandler())
     app.logger.propagate = True
 
-    data_dir = Path(os.environ.get("DATA_DIR", "data"))
-    data_dir.mkdir(parents=True, exist_ok=True)
+    default_data_dir = Path(__file__).resolve().parent.parent / "data"
+    data_dir = Path(os.environ.get("DATA_DIR", str(default_data_dir))).resolve()
     app.config.update(
         SECRET_KEY=os.environ.get("SECRET_KEY", "change-me"),
         DATABASE=str(data_dir / "contacts.db"),
@@ -33,6 +33,8 @@ def create_app() -> Flask:
         DOCKER_IMAGE=os.environ.get("DOCKER_IMAGE", DEFAULT_DOCKER_IMAGE),
         STATUS_CACHE_TTL=float(os.environ.get("STATUS_CACHE_TTL", "300")),
     )
+    if test_config is not None:
+        app.config.update(test_config)
 
     app.register_blueprint(bp)
 

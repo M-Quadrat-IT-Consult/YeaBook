@@ -1,5 +1,7 @@
 from collections import defaultdict
 from pathlib import Path
+from stat import S_IMODE
+from tempfile import NamedTemporaryFile
 from typing import Dict, Iterable, Mapping
 from xml.etree import ElementTree as ET
 
@@ -69,5 +71,16 @@ def write_phonebook_xml(
         default_group=default_group,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    tree.write(output_path, encoding="utf-8", xml_declaration=True)
-    return ET.tostring(tree.getroot(), encoding="unicode")
+    xml_content = ET.tostring(tree.getroot(), encoding="unicode")
+    temporary_path = None
+    try:
+        with NamedTemporaryFile(dir=output_path.parent, prefix=".phonebook-", suffix=".xml", delete=False) as output:
+            temporary_path = Path(output.name)
+            tree.write(output, encoding="utf-8", xml_declaration=True)
+        temporary_path.chmod(S_IMODE(output_path.stat().st_mode) if output_path.exists() else 0o644)
+        temporary_path.replace(output_path)
+    except BaseException:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+        raise
+    return xml_content
