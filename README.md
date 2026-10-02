@@ -31,7 +31,7 @@ The UI pings GitHub and Docker Hub (configurable) to display a release status in
 
 ### Switching the interface language
 
-The UI can be displayed in English, German, or Polish. Use the language selector in the top-right corner of the page to switch instantly between translations.
+The UI can be displayed in English, German, or Polish. By default it automatically selects a supported language from the browser's `Accept-Language` preferences, including regional variants such as `pl-PL` and `de-DE`. English is used when no supported language is found or no preference is sent. A manual choice in the top-right language selector is remembered for the session and overrides browser preferences. Select **Automatic (browser)** to return to automatic detection.
 
 ### Importing contacts from CSV
 
@@ -65,13 +65,13 @@ The default group can be changed globally with the `DEFAULT_GROUP_NAME` environm
 
 ### Downloading a database backup
 
-Click **Download database backup** in the web page header. The browser downloads a timestamped `yeabook-backup-<UTC timestamp>.db` file containing the complete SQLite database: contacts, groups, companies, comments, IDs, and schema version. This also works for an empty phonebook.
+Click **Backup & restore** in the web page header, then **Download database backup** in the dialog. The browser downloads a timestamped `yeabook-backup-<UTC timestamp>.db` file containing the complete SQLite database: contacts, groups, companies, comments, IDs, and schema version. This also works for an empty phonebook.
 
 The app creates a consistent snapshot while it is running, including committed changes in SQLite's WAL journal. Each download creates a fresh copy. Temporary files are removed when the download finishes or is disconnected; manual downloads do not accumulate in the server's `backups/` directory. If creation fails, the page displays an error instead of downloading an incomplete file.
 
 ### Restoring a database backup
 
-Open **Restore database from backup** on the web page, select a previously downloaded `.db` file (maximum 64 MiB), confirm replacement of the current contacts, and click **Restore database**. Restoration replaces all contacts, including their IDs, groups, companies and comments, and refreshes the Yealink XML. Application configuration (environment variables) is not included in the backup.
+Open **Backup & restore** on the web page. In the **Restore database from backup** section, select a previously downloaded `.db` file (maximum 64 MiB), confirm replacement of the current contacts, and click **Restore database**. Restoration replaces all contacts, including their IDs, groups, companies and comments, and refreshes the Yealink XML. Application configuration (environment variables) is not included in the backup.
 
 Before changing any live data, YeaBook checks SQLite integrity, the expected tables and columns, and the schema version. Backups from schema v1 and v2 are upgraded in a temporary copy; backups from newer unsupported schemas and invalid files are rejected without changing the live database. Empty YeaBook databases are also supported.
 

@@ -310,6 +310,65 @@ class ContactTests(DatabaseTestCase):
         self.assertEqual(self.contact()["comment"], "Pierwsza linia\nDruga linia")
 
 
+class LanguageTests(DatabaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.app = create_app(self.config)
+        self.client = self.app.test_client()
+
+    def test_browser_preferences_and_english_fallback(self):
+        for header, expected in [
+            (None, "en"),
+            ("", "en"),
+            ("fr-FR,es;q=0.8", "en"),
+            ("pl", "pl"),
+            ("pl-PL,de;q=0.8,en;q=0.5", "pl"),
+            ("de-DE,en;q=0.9", "de"),
+            ("fr-FR,pl-PL;q=0.8,en;q=0.5", "pl"),
+            ("pl;q=0.5,de-DE;q=0.9", "de"),
+            ("pl-PL,en", "pl"),
+            ("en-US,de;q=0.8", "en"),
+            ("DE-de,en;q=0.5", "de"),
+            ("pl;q=0,de;q=0.5", "de"),
+            ("pl;q=0,de;q=0", "en"),
+            ("*", "en"),
+        ]:
+            with self.subTest(header=header):
+                headers = {"Accept-Language": header} if header is not None else {}
+                html = self.client.get("/", headers=headers).get_data(as_text=True)
+                self.assertIn(f'<html lang="{expected}">', html)
+                self.assertRegex(html, r'<option value="auto"\s+selected')
+
+    def test_manual_selection_overrides_browser_and_is_remembered(self):
+        self.client.get("/", headers={"Accept-Language": "de-DE"})
+        self.client.post("/set-language", data={"language": "pl"})
+        for header in ["de-DE", "en-US", "fr-FR"]:
+            html = self.client.get("/", headers={"Accept-Language": header}).get_data(as_text=True)
+            self.assertIn('<html lang="pl">', html)
+            self.assertRegex(html, r'<option value="pl"\s+selected')
+        with self.client.session_transaction() as session:
+            self.assertEqual(session["language"], "pl")
+
+    def test_return_to_automatic_mode_and_follow_browser_changes(self):
+        self.client.post("/set-language", data={"language": "pl"})
+        self.client.post("/set-language", data={"language": "auto"})
+        for header, expected in [("de-DE", "de"), ("pl-PL", "pl"), ("fr-FR", "en")]:
+            html = self.client.get("/", headers={"Accept-Language": header}).get_data(as_text=True)
+            self.assertIn(f'<html lang="{expected}">', html)
+        with self.client.session_transaction() as session:
+            self.assertNotIn("language", session)
+
+    def test_invalid_saved_language_uses_browser_preferences(self):
+        with self.client.session_transaction() as session:
+            session["language"] = "unsupported"
+        html = self.client.get("/", headers={"Accept-Language": "de-DE"}).get_data(as_text=True)
+        self.assertIn('<html lang="de">', html)
+
+    def test_flash_messages_use_detected_language(self):
+        response = self.client.post("/contacts", data={"name": ""}, headers={"Accept-Language": "pl-PL"}, follow_redirects=True)
+        self.assertIn("Nazwa kontaktu jest wymagana.", response.get_data(as_text=True))
+
+
 class BackupDownloadTests(DatabaseTestCase):
     def setUp(self):
         super().setUp()

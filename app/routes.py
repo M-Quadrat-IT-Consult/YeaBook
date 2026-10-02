@@ -40,7 +40,7 @@ from .db import (
     update_contact,
     write_database_backup,
 )
-from .i18n import get_language_options, get_message, get_ui_strings, resolve_language
+from .i18n import DEFAULT_LANGUAGE, get_language_options, get_message, get_ui_strings, resolve_language
 from .status import compare_versions, get_release_status
 from .xml_utils import write_phonebook_xml
 
@@ -282,6 +282,7 @@ def index():
         ui=ui_strings,
         languages=get_language_options(),
         current_language=language,
+        automatic_language=session.get("language") not in get_language_options(),
         groups=groups,
         default_group=default_group,
         edit_contact=edit_contact,
@@ -603,8 +604,11 @@ def phonebook() -> Response:
 
 @bp.route("/set-language", methods=["POST"])
 def set_language():
-    language = resolve_language(request.form.get("language"))
-    session["language"] = language
+    selected = request.form.get("language")
+    if selected == "auto":
+        session.pop("language", None)
+    else:
+        session["language"] = resolve_language(selected)
     return redirect(url_for("main.index"))
 
 
@@ -636,9 +640,16 @@ def status_api():
 
 def _get_language() -> str:
     language = session.get("language")
-    resolved = resolve_language(language)
-    session.setdefault("language", resolved)
-    return resolved
+    supported = get_language_options()
+    if language in supported:
+        return language
+    # Normalize regional variants before matching so a preferred pl-PL or
+    # de-DE retains its priority over a lower-ranked exact language match.
+    for code, quality in sorted(request.accept_languages, key=lambda item: item[1], reverse=True):
+        primary_language = code.replace("_", "-").split("-", 1)[0].lower()
+        if quality > 0 and primary_language in supported:
+            return primary_language
+    return DEFAULT_LANGUAGE
 
 
 def _invalid_phone_labels(

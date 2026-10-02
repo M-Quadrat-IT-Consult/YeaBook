@@ -78,6 +78,9 @@ body {
             align-items: center;
         }
         .header-link {
+            background: transparent;
+            font: inherit;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
@@ -274,10 +277,32 @@ body {
         .form-card {
             animation: floatUp 0.45s ease both;
         }
-        .restore-card summary {
-            cursor: pointer;
-            font-weight: 600;
+        .backup-dialog {
+            width: min(38rem, calc(100vw - 2rem));
+            max-height: calc(100dvh - 2rem);
+            box-sizing: border-box;
+            overflow-y: auto;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 22px;
+            padding: clamp(1rem, 3vw, 2rem);
+            background: var(--card-bg);
             color: var(--text-strong);
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(18px);
+        }
+        .backup-dialog::backdrop {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        .backup-dialog-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .backup-dialog-header h2 {
+            margin: 0;
+            font-size: 1.35rem;
         }
         .restore-description {
             color: var(--text-soft);
@@ -947,17 +972,18 @@ body {
                 {% endif %}
             </div>
             <div class="header-controls">
-                <a class="header-link" href="{{ url_for('main.download_backup') }}" title="{{ ui.backup_download_hint }}">
-                    {{ ui.backup_download_label }}
-                </a>
+                <button type="button" class="header-link" id="backup-toggle" aria-haspopup="dialog" aria-controls="backup-dialog">
+                    {{ ui.backup_title }}
+                </button>
                 <a class="header-link" href="{{ url_for('main.phonebook') }}" target="_blank" rel="noopener">
                     {{ ui.xml_preview_label }}
                 </a>
                 <form method="post" action="{{ url_for('main.set_language') }}" class="language-switcher">
                     <label for="language">{{ ui.language_label }}</label>
                     <select id="language" name="language" onchange="this.form.submit()">
+                        <option value="auto" {% if automatic_language %}selected{% endif %}>{{ ui.language_auto_label }}</option>
                         {% for code, label in languages.items() %}
-                            <option value="{{ code }}" {% if code == current_language %}selected{% endif %}>
+                            <option value="{{ code }}" {% if not automatic_language and code == current_language %}selected{% endif %}>
                                 {{ label }}
                             </option>
                         {% endfor %}
@@ -976,8 +1002,15 @@ body {
             {% endif %}
         {% endwith %}
 
-        <details class="card restore-card">
-            <summary>{{ ui.restore_title }}</summary>
+        <dialog id="backup-dialog" class="backup-dialog" aria-labelledby="backup-dialog-title">
+            <div class="backup-dialog-header">
+                <h2 id="backup-dialog-title">{{ ui.backup_title }}</h2>
+                <button type="button" class="button button-secondary" id="backup-close">{{ ui.backup_close_label }}</button>
+            </div>
+            <a class="button button-secondary" href="{{ url_for('main.download_backup') }}" title="{{ ui.backup_download_hint }}">
+                {{ ui.backup_download_label }}
+            </a>
+            <h3>{{ ui.restore_title }}</h3>
             <p class="restore-description">{{ ui.restore_description }}</p>
             <form method="post" action="{{ url_for('main.restore_backup') }}" enctype="multipart/form-data" class="restore-form">
                 <input type="hidden" name="restore_token" value="{{ restore_token }}">
@@ -994,7 +1027,7 @@ body {
                     <button type="submit" class="button button-danger">{{ ui.restore_submit }}</button>
                 </div>
             </form>
-        </details>
+        </dialog>
 
         <section class="card form-card">
             <h2>{{ ui.form_edit_title if is_editing else ui.form_create_title }}</h2>
@@ -1178,6 +1211,14 @@ body {
     </script>
     <script>
         (function () {
+            const backupToggle = document.getElementById('backup-toggle');
+            const backupDialog = document.getElementById('backup-dialog');
+            const backupClose = document.getElementById('backup-close');
+            if (backupToggle && backupDialog && backupClose) {
+                backupToggle.addEventListener('click', () => backupDialog.showModal());
+                backupClose.addEventListener('click', () => backupDialog.close());
+            }
+
             const rows = document.querySelectorAll('[data-delay-ms]');
             rows.forEach((row) => {
                 const value = Number(row.getAttribute('data-delay-ms'));
