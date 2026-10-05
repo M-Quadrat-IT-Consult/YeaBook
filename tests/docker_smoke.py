@@ -29,7 +29,7 @@ def main():
                 "run", "--rm", "--network", "none", "-v", f"{volume}:/data",
                 *platform_options,
                 "-e", f"TEST_PLATFORM={platform or ''}",
-                "-e", f"EXPECTED_APP_VERSION={os.environ.get('EXPECTED_APP_VERSION', '0.1.0')}",
+                "-e", f"EXPECTED_APP_VERSION={os.environ.get('EXPECTED_APP_VERSION', '0.1.3')}",
                 *options, image, "python", "-c", code,
             )
             if output:
