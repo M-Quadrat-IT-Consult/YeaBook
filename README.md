@@ -33,6 +33,26 @@ The UI pings GitHub and Docker Hub (configurable) to display a release status in
 
 The UI can be displayed in English, German, or Polish. By default it automatically selects a supported language from the browser's `Accept-Language` preferences, including regional variants such as `pl-PL` and `de-DE`. English is used when no supported language is found or no preference is sent. A manual choice in the top-right language selector is remembered for the session and overrides browser preferences. Select **Automatic (browser)** to return to automatic detection.
 
+### Optional panel login
+
+Open **Settings**, enable **Require login to access the panel**, choose an administrator username and a password of at least 12 characters, repeat the password and save. Login is **disabled by default** for compatibility with existing installations. Enabling it signs in the configuring browser immediately. Use **Sign out** to end that session.
+
+When enabled, authentication protects contact management, CSV imports, settings, database downloads and restoration. `/phonebook.xml` stays accessible without login so Yealink phones can continue refreshing their directories. Changing credentials or disabling login requires the current password. Leaving the new password blank keeps it unchanged; password changes invalidate other signed-in sessions. Disabling login clears the saved password hash; enabling it again requires a new password.
+
+Settings, password hashes and a randomly generated session key are stored in `DATA_DIR/panel-settings.db`, with file mode `0600`. Reusing the data volume preserves them across releases and keeps all Gunicorn workers on the same configuration. A custom `SECRET_KEY` environment variable can override the generated key; the legacy `change-me` default is replaced automatically. For deployment behind HTTPS, set `SESSION_COOKIE_SECURE=true` so session cookies are sent only over HTTPS. The management panel should be reached over HTTPS when login is enabled.
+
+The settings database tracks its own schema using SQLite `user_version`. Initial creation is transactional and serialized between workers; newer unsupported schemas and missing security records stop startup instead of disabling protection.
+
+Authenticated POST forms use CSRF tokens, and settings/login forms require them even before authentication is enabled. Five failed login attempts from the same client address temporarily block further attempts for five minutes. The address is the direct connection address; behind a reverse proxy this limit may be shared by its clients.
+
+If the administrator password is lost, reset panel authentication using local access to the container:
+
+```bash
+docker exec <container-name> flask reset-panel-auth --yes
+```
+
+This disables login and invalidates existing authenticated sessions while preserving contact data. Configure new credentials in **Settings** afterwards.
+
 ### Importing contacts from CSV
 
 - Use the **Import contacts from CSV** card on the homepage to upload a UTF-8 CSV (comma, semicolon, or tab separators are supported).
@@ -69,6 +89,8 @@ Click **Backup & restore** in the web page header, then **Download database back
 
 The app creates a consistent snapshot while it is running, including committed changes in SQLite's WAL journal. Each download creates a fresh copy. Temporary files are removed when the download finishes or is disconnected; manual downloads do not accumulate in the server's `backups/` directory. If creation fails, the page displays an error instead of downloading an incomplete file.
 
+Contact backups do not include `panel-settings.db`, passwords or the session key. Restoring contacts keeps the current panel access settings. Back up the whole data volume separately when moving an installation together with its access configuration.
+
 ### Restoring a database backup
 
 Open **Backup & restore** on the web page. In the **Restore database from backup** section, select a previously downloaded `.db` file (maximum 64 MiB), confirm replacement of the current contacts, and click **Restore database**. Restoration replaces all contacts, including their IDs, groups, companies and comments, and refreshes the Yealink XML. Application configuration (environment variables) is not included in the backup.
@@ -88,6 +110,8 @@ Before upgrading an existing contacts database, the app creates a consistent SQL
 The result and backup path are logged (`Database schema is up to date` / `Database schema upgraded from vX to vY`). Keep the data volume, including backups, when upgrading. Pre-upgrade backups can be restored through the web interface using the same validation and migration process. Restoring an older backup also restores its older contact data.
 
 For future schema changes, append a migration to `MIGRATIONS` in `app/db.py`, increase `TARGET_SCHEMA_VERSION`, and extend the migration tests. Migration functions must not commit independently or modify earlier migration steps.
+
+XML publication acquires SQLite's `BEGIN IMMEDIATE` writer lock before reading contacts and holds it until the XML has been atomically replaced. All workers use the same lock, and restoration reuses its transaction. Concurrent edits and restores therefore cannot overwrite a newer XML snapshot with an older one.
 
 ### Phone number validation
 
@@ -207,7 +231,7 @@ Push a version tag such as `v0.1.3` on a commit containing the updated workflow,
 
 Stable tags (`v0.1.3`) publish the exact tag and `latest` to each configured registry. All prerelease tags (`v0.1.3-dev`, `v0.1.3-beta.1`, `v0.1.3-rc.1`) publish only their exact tag and leave `latest` unchanged. Tags must have the form `vMAJOR.MINOR.PATCH[-PRERELEASE]`; build metadata (`+...`) is not supported in Docker image tags.
 
-The selected release tag is baked into `APP_VERSION`, so the UI reports the version actually deployed. Local Docker builds default to `0.1.0` and can override it with `--build-arg APP_VERSION=v0.1.3`. The multi-architecture release contains `linux/amd64`, `linux/arm64`, `linux/386`, and `linux/arm/v7` images.
+The selected release tag is baked into `APP_VERSION`, so the UI reports the version actually deployed. Local Docker builds default to `0.1.3` and can override it with `--build-arg APP_VERSION=v0.1.3`. The multi-architecture release contains `linux/amd64`, `linux/arm64`, `linux/386`, and `linux/arm/v7` images.
 
 If publishing fails, check the registry login and build steps in the workflow log. Docker Hub authentication failures require a valid token; a GHCR `permission_denied: write_package` error requires checking package access or organization policy, rather than adding a separate PAT to this workflow.
 

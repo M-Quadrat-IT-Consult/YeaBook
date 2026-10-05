@@ -23,7 +23,7 @@ COPY app ./app
 COPY docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ARG APP_VERSION=0.1.0
+ARG APP_VERSION=0.1.3
 ENV APP_VERSION=${APP_VERSION}
 
 ENTRYPOINT ["/entrypoint.sh"]

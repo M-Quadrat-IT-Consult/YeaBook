@@ -182,6 +182,76 @@ with sqlite3.connect('/data/contacts.db') as db:
     assert db.execute('SELECT comment FROM contacts WHERE id = 42').fetchone()[0] == 'Persistent comment'
 ''')
         print("PASS: HTTP backup restoration across three workers, safety copy, XML refresh, invalid upload rejection", flush=True)
+        docker("exec", container, "python", "-c", '''
+import http.cookiejar
+import re
+import socket
+import sqlite3
+import urllib.parse
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from xml.etree import ElementTree as ET
+import gunicorn
+
+assert gunicorn.__version__ == '26.2.0'
+base = 'http://127.0.0.1:8000'
+
+def add(number):
+    payload = urllib.parse.urlencode({'name': 'Concurrent ' + str(number)}).encode()
+    with urllib.request.urlopen(base + '/contacts', data=payload) as response:
+        assert response.status == 200
+
+with ThreadPoolExecutor(max_workers=8) as pool:
+    list(pool.map(add, range(16)))
+with sqlite3.connect('/data/contacts.db') as db:
+    names = {row[0] for row in db.execute('SELECT name FROM contacts')}
+with urllib.request.urlopen(base + '/phonebook.xml') as response:
+    xml_names = {unit.attrib['Name'] for unit in ET.fromstring(response.read()).iter('Unit')}
+assert names == xml_names and len(names) == 17
+
+opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
+def form_state():
+    with opener.open(base + '/settings') as response:
+        html = response.read().decode()
+    return {name: re.search(r'name="' + name + '" value="([^"]+)"', html).group(1)
+            for name in ['csrf_token', 'security_revision']}
+
+password = 'Integration test password 123!'
+fields = {**form_state(), 'auth_enabled': 'yes', 'username': 'admin',
+          'password': password, 'password_confirm': password}
+with opener.open(base + '/settings', urllib.parse.urlencode(fields).encode()) as response:
+    assert response.status == 200
+for path in ['/', '/backup', '/settings']:
+    with urllib.request.urlopen(base + path) as response:
+        assert '/login' in response.geturl()
+with urllib.request.urlopen(base + '/phonebook.xml') as response:
+    assert response.status == 200 and b'YealinkIPPhoneBook' in response.read()
+for _ in range(12):
+    with opener.open(base + '/') as response:
+        assert '/login' not in response.geturl() and b'Persistent comment' in response.read()
+with opener.open(base + '/backup') as response:
+    assert response.headers['Content-Disposition'].startswith('attachment;')
+
+anonymous = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+with anonymous.open(base + '/login') as response:
+    html = response.read().decode()
+csrf = re.search(r'name="csrf_token" value="([^"]+)"', html).group(1)
+with anonymous.open(base + '/login', urllib.parse.urlencode({'csrf_token': csrf, 'username': 'admin', 'password': password}).encode()) as response:
+    assert '/login' not in response.geturl()
+fields = {**form_state(), 'current_password': password}
+with opener.open(base + '/settings', urllib.parse.urlencode(fields).encode()) as response:
+    assert response.status == 200
+with urllib.request.urlopen(base + '/') as response:
+    assert '/login' not in response.geturl()
+with sqlite3.connect('/data/panel-settings.db') as db:
+    assert db.execute('SELECT auth_enabled FROM panel_security').fetchone()[0] == 0
+
+with socket.create_connection(('127.0.0.1', 8000), timeout=5) as connection:
+    connection.sendall(b'POST /contacts HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\nContent-Length: 4\\r\\nTransfer-Encoding: chunked\\r\\n\\r\\n0\\r\\n\\r\\n')
+    assert b'400' in connection.recv(4096).split(b'\\r\\n', 1)[0]
+''')
+        print("PASS: Gunicorn 26.2.0, concurrent HTTP writers, optional authentication across workers, public XML, HTTP framing rejection", flush=True)
     finally:
         if created_container:
             docker("rm", "-f", container)

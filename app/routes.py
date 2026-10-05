@@ -33,6 +33,7 @@ from .db import (
     delete_contact,
     fetch_contact,
     fetch_contacts,
+    get_db,
     init_db,
     insert_contact,
     prepare_database_restore,
@@ -66,18 +67,27 @@ MAX_BACKUP_UPLOAD_BYTES = 64 * 1024 * 1024
 
 
 def _publish_phonebook() -> str:
-    contacts = fetch_contacts()
-    xml_path = Path(current_app.config["XML_FILE"])
-    title = current_app.config["PHONEBOOK_TITLE"]
-    prompt = current_app.config["PHONEBOOK_PROMPT"]
-    default_group = current_app.config["DEFAULT_GROUP_NAME"]
-    return write_phonebook_xml(
-        contacts,
-        xml_path,
-        title=title,
-        prompt=prompt,
-        default_group=default_group,
-    )
+    db = get_db()
+    owns_transaction = not db.in_transaction
+    # Hold SQLite's cross-process writer lock from snapshot selection through
+    # XML publication. During restoration we reuse the existing transaction.
+    if owns_transaction:
+        db.execute("BEGIN IMMEDIATE")
+    try:
+        content = write_phonebook_xml(
+            fetch_contacts(),
+            Path(current_app.config["XML_FILE"]),
+            title=current_app.config["PHONEBOOK_TITLE"],
+            prompt=current_app.config["PHONEBOOK_PROMPT"],
+            default_group=current_app.config["DEFAULT_GROUP_NAME"],
+        )
+        if owns_transaction:
+            db.commit()
+        return content
+    except BaseException:
+        if owns_transaction:
+            db.rollback()
+        raise
 
 
 def _get_import_cache_dir() -> Path:

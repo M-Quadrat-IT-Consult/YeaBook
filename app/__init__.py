@@ -5,6 +5,7 @@ from pathlib import Path
 from flask import Flask
 
 from .routes import bp
+from .security import bp as security_bp, initialize_security
 from .version import (
     DEFAULT_APP_VERSION,
     DEFAULT_DOCKER_IMAGE,
@@ -22,7 +23,10 @@ def create_app(test_config=None) -> Flask:
     default_data_dir = Path(__file__).resolve().parent.parent / "data"
     data_dir = Path(os.environ.get("DATA_DIR", str(default_data_dir))).resolve()
     app.config.update(
-        SECRET_KEY=os.environ.get("SECRET_KEY", "change-me"),
+        SECRET_KEY=os.environ.get("SECRET_KEY"),
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "").lower() in {"1", "true", "yes"},
         DATABASE=str(data_dir / "contacts.db"),
         XML_FILE=str(data_dir / "phonebook.xml"),
         PHONEBOOK_TITLE=os.environ.get("PHONEBOOK_TITLE", "YeaBook Directory"),
@@ -36,6 +40,9 @@ def create_app(test_config=None) -> Flask:
     if test_config is not None:
         app.config.update(test_config)
 
+    app.config.setdefault("SECURITY_DATABASE", str(Path(app.config["DATABASE"]).parent / "panel-settings.db"))
+    initialize_security(app)
+    app.register_blueprint(security_bp)
     app.register_blueprint(bp)
 
     return app
